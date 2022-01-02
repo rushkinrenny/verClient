@@ -26,6 +26,7 @@ function App() {
 
   const setEncryption = (enc) => {
     const url = `/encryption?enc=${enc}`;
+    // http://localhost:5000/encryption?enc = aes-128-cbc
     axios
       .get(url)
       .then((response) => "")
@@ -38,6 +39,7 @@ function App() {
 
   const handleUrl = () => {
     return query ? `/query?q=${query}` : null;
+    // http://localhost:5000/query?q = bird
   };
 
   return (

@@ -10,7 +10,7 @@ let url = "",
   keys = {},
   encryption = {},
   userQuery = {},
-  flag = 1,
+  flag = 0,
   searchEngine = "google",
   serve = flag ? "https://vprserver.herokuapp.com" : "http://localhost:7000";
 
@@ -48,6 +48,7 @@ const decrypt = (hash, key, enc) => {
 
 const getID = async (enc, req, res) => {
   if (!id[req.header("x-forwarded-for")])
+    //req.header("x-forwarded-for")-->originating IP address of a client connecting to a web server through an HTTP proxy or a load balancer
     axios
       .get(`${serve}/getId`)
       .then(async (response) => {
@@ -65,8 +66,8 @@ const setEncryption = async (enc, req, res) => {
   axios
     .get(url)
     .then((response) => {
-      keys[req.header("x-forwarded-for")] = response.data;
-      console.log("Encryption:", encryption[req.header("x-forwarded-for")]);
+      keys[req.header("x-forwarded-for")] = response.data; // get key from Server
+      console.log("Encryption:", encryption[req.header("x-forwarded-for")]); // show encryption which is set at middleMan and server
       console.log(
         "Key:",
         keys[req.header("x-forwarded-for")],
@@ -78,6 +79,7 @@ const setEncryption = async (enc, req, res) => {
 };
 
 const getResponse = async (query, req, res) => {
+  /*Convert query into encrypted form and send encrypted query to the server */
   console.log(
     "Incoming Query:",
     query,
@@ -96,9 +98,9 @@ const getResponse = async (query, req, res) => {
       }`
     )
     .then((response) => {
-      const data = response.data;
+      const data = response.data; // body of html
       if (data) {
-        userQuery[req.header("x-forwarded-for")] = "";
+        // userQuery[req.header("x-forwarded-for")] = "";
 
         res.send(
           decrypt(
@@ -112,6 +114,11 @@ const getResponse = async (query, req, res) => {
     .catch((err) => console.log("Get Response Error:", err));
 };
 
+getDomainWithProtocol = (url) => {
+  let domainWithProtocol = new URL(url);
+  return `${domainWithProtocol.protocol}//${domainWithProtocol.hostname}`;
+};
+
 app.get("/encryption", async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   await getID(req.query.enc, req, res);
@@ -123,7 +130,7 @@ app.get("/query", async (req, res) => {
   let query = req.query.q;
 
   if (query) {
-    userQuery[req.header("x-forwarded-for")] = query;
+    // userQuery[req.header("x-forwarded-for")] = query;
     domain = `https://${searchEngine}.com`;
     query = `${domain}/search?q=${query}`;
     await getResponse(query, req, res);
@@ -134,12 +141,12 @@ app.get("/url", async (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   url = req.query.q;
   if (!url) return res.send("");
-  const [s, e] = domainExtract(url);
-  domain = url.substring(s, e);
+  domain = getDomainWithProtocol(url);
   await getResponse(url, req, res);
 });
 
 app.get("*", async (req, res) => {
+  // extra response of file like logo, icon etc.
   res.header("Access-Control-Allow-Origin", "*");
   url = req.url;
   if (!url) res.send("");
